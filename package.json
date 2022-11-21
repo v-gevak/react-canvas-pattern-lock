@@ -1,32 +1,109 @@
 {
-  "name": "react-pattern-lock",
+  "name": "react-canvas-pattern-lock",
   "version": "0.1.0",
   "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "build": "yarn build:ts && yarn build:dts",
+    "build:ts": "rollup -c",
+    "build:dts": "dts-bundle-generator --no-banner --config dts.json"
+  },
   "dependencies": {
-    "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^13.0.0",
-    "@testing-library/user-event": "^13.2.1",
-    "@types/jest": "^27.0.1",
+    "react-merge-refs": "^1.1.0",
+    "react-use-event-hook": "^0.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^9.0.2",
+    "@storybook/addon-essentials": "^7.0.0-alpha.51",
+    "@storybook/addon-links": "^7.0.0-alpha.51",
+    "@storybook/node-logger": "^7.0.0-alpha.51",
+    "@storybook/preset-create-react-app": "^4.1.2",
+    "@storybook/react": "^7.0.0-alpha.51",
+    "@storybook/react-webpack5": "^7.0.0-alpha.51",
     "@types/node": "^16.7.13",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "babel-plugin-named-exports-order": "^0.0.2",
+    "dts-bundle-generator": "^7.0.0",
+    "eslint": "^8.28.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.25",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "typescript": "^4.4.2",
-    "web-vitals": "^2.1.0"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "rollup": "^3.3.0",
+    "rollup-plugin-auto-external": "^2.0.0",
+    "storybook": "^7.0.0-alpha.51",
+    "typescript": "~4.8.4",
+    "webpack": "^5.75.0"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
-      "react-app/jest"
-    ]
+      "react-app/jest",
+      "airbnb-base"
+    ],
+    "parserOptions": {
+      "project": [
+        "./tsconfig.json"
+      ]
+    },
+    "overrides": [
+      {
+        "files": [
+          "**/*.stories.*"
+        ],
+        "rules": {
+          "import/no-anonymous-default-export": "off"
+        }
+      }
+    ],
+    "settings": {
+      "import/resolver": {
+        "node": {
+          "extensions": [
+            ".js",
+            ".jsx",
+            ".ts",
+            ".tsx"
+          ]
+        }
+      }
+    },
+    "rules": {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "error",
+      "no-underscore-dangle": "off",
+      "import/prefer-default-export": "off",
+      "import/extensions": [
+        "error",
+        "ignorePackages",
+        {
+          "js": "never",
+          "jsx": "never",
+          "ts": "never",
+          "tsx": "never"
+        }
+      ]
+    },
+    "env": {
+      "browser": true,
+      "node": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "browserslist": {
     "production": [

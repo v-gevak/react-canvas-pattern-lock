@@ -12,7 +12,8 @@
 /build
 
 # misc
-.idea/*
+**/.idea/workspace.xml
+**/.idea/tasks.xml
 .DS_Store
 .env.local
 .env.development.local

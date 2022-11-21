@@ -5,11 +5,11 @@ import useEvent from 'react-use-event-hook';
 import { PatternLock } from './pattern-lock';
 import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE } from './consts';
 import type {
-  GraphicPasscodeProps, TNodes, TPatternLock,
+  TProps, TNodes, TPatternLockInstance,
 } from './typings';
 import { nodesToCode } from './utils/libs';
 
-export const ReactCanvasPatternLock = forwardRef<TPatternLock, GraphicPasscodeProps>(
+export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
   (
     {
       width = 320,
@@ -25,7 +25,7 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLock, GraphicPasscodePr
     ref,
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const patternLockInnerRef = useRef<TPatternLock>();
+    const patternLockInnerRef = useRef<TPatternLockInstance>();
 
     const handleComplete = useEvent((nodes: TNodes) => {
       if (nodes?.length) {

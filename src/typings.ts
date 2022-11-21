@@ -63,7 +63,7 @@ export type ThemeParams = {
 
 export type Theme = Record<string, ThemeParams>;
 
-export type TPatternLock = {
+export type TPatternLockInstance = {
     destroy: () => void;
 
     /**
@@ -82,7 +82,7 @@ export type TPatternLock = {
     setThemeState: (themeName: string) => void;
 };
 
-export type GraphicPasscodeProps = {
+export type TProps = {
     /**
      * Метод выравнивания узлов.
      * @default space-available
@@ -134,7 +134,7 @@ export type GraphicPasscodeProps = {
     theme?: Theme;
 };
 
-export type PatternLockOptions = {
+export type TPatternLockOptions = {
     $canvas: HTMLCanvasElement;
     width: number;
     height:number;

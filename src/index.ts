@@ -1,5 +1,5 @@
 export * from './Component';
 
 export type {
-  GraphicPasscodeProps, ThemeParams, Theme, TNodes, TPatternLock,
+  TProps, ThemeParams, Theme, TNodes, TPatternLockInstance,
 } from './typings';

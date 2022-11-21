@@ -3,7 +3,7 @@ import EventBus from '../utils/EventBus';
 import { gcd, prop } from '../utils/libs';
 import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE, JUSTIFY_NODES_OPTION } from '../consts';
 import {
-  PatternLockOptions, Theme, ThemeParams, TNodes,
+  TPatternLockOptions, Theme, ThemeParams, TNodes,
 } from '../typings';
 
 const createInvalidOptionError = (option: string) => new Error(`Invalid or empty ${option} passed`);
@@ -34,7 +34,7 @@ class PatternLock {
 
   themeState: ThemeParams = DEFAULT_LIGHT_THEME[DEFAULT_THEME_STATE.INITIAL];
 
-  justifyNodes: PatternLockOptions['justifyNodes'] = 'space-around';
+  justifyNodes: TPatternLockOptions['justifyNodes'] = 'space-around';
 
   dimens = { width: 300, height: 400 };
 
@@ -58,7 +58,7 @@ class PatternLock {
 
   bounds: {x: number, y: number} = { x: 0, y: 0 };
 
-  constructor(config: PatternLockOptions) {
+  constructor(config: TPatternLockOptions) {
     if (!config.$canvas) throw createInvalidOptionError('$canvas');
 
     this.initialize({ ...defaultConfig, ...config });
@@ -72,7 +72,7 @@ class PatternLock {
     height = 400,
     themeState = 'initial',
     justifyNodes = 'space-around',
-  }:PatternLockOptions) {
+  }: TPatternLockOptions) {
     this.$canvas = $canvas;
     this.ctx = this.$canvas.getContext('2d');
     this.theme = theme;

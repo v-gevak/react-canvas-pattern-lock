@@ -12,8 +12,8 @@ import { nodesToCode } from './utils/libs';
 export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
   (
     {
-      width = 320,
-      height = 320,
+      width = 315,
+      height = 315,
       onComplete,
       themeState,
       onDragStart,

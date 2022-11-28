@@ -5,7 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="f33aaf4d-80be-465a-b6a7-1d80de73ded9" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Component.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/Component.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pattern-lock/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/pattern-lock/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,7 +31,7 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/alfa/react-canvas-pattern-lock&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/lacront/projects/react-canvas-pattern-lock&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.standard&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -37,7 +40,7 @@
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;yarn&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;settings.javascript.linters.eslint&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;/Users/alfa/react-canvas-pattern-lock/node_modules/typescript/lib&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;/Users/lacront/projects/react-canvas-pattern-lock/node_modules/typescript/lib&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -57,6 +60,8 @@
       <workItem from="1668960735158" duration="816000" />
       <workItem from="1668961972036" duration="1855000" />
       <workItem from="1668964012607" duration="11611000" />
+      <workItem from="1669615599799" duration="1493000" />
+      <workItem from="1669617103258" duration="188000" />
     </task>
     <servers />
   </component>

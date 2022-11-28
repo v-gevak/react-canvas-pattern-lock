@@ -13,15 +13,9 @@ const events = {
   PATTERN_START: 'start',
 };
 
-const defaultConfig = {
-  grid: [3, 3],
-  width: 300,
-  height: 430,
-  themeState: 'initial',
-  justifyContent: 'space-available',
-};
-
 class PatternLock {
+  _config: TPatternLockOptions | null = null;
+
   $canvas: HTMLCanvasElement | null = null;
 
   ctx: CanvasRenderingContext2D | null = null;
@@ -61,18 +55,20 @@ class PatternLock {
   constructor(config: TPatternLockOptions) {
     if (!config.$canvas) throw createInvalidOptionError('$canvas');
 
-    this.initialize({ ...defaultConfig, ...config });
+    this.initialize(config);
   }
 
-  initialize({
-    $canvas,
-    grid: [rows, cols],
-    theme,
-    width = 300,
-    height = 400,
-    themeState = 'initial',
-    justifyNodes = 'space-around',
-  }: TPatternLockOptions) {
+  initialize(config: TPatternLockOptions) {
+    const {
+      $canvas,
+      grid,
+      theme,
+      width,
+      height,
+      themeState,
+      justifyNodes,
+    } = config;
+    this._config = config;
     this.$canvas = $canvas;
     this.ctx = this.$canvas.getContext('2d');
     this.theme = theme;
@@ -80,7 +76,7 @@ class PatternLock {
     this.justifyNodes = justifyNodes;
 
     this.setDimensions({ width, height });
-    this.setGrid(rows, cols);
+    this.setGrid(grid[0], grid[1]);
     this.renderGrid();
     this.attachEventHandlers();
   }
@@ -105,6 +101,10 @@ class PatternLock {
     this.coordinates = null;
     this.selectedNodes = [];
     this.lastSelectedNode = null;
+    if (this._config) {
+      this.themeState = this.theme[this._config.themeState];
+    }
+    this.forceRender();
   }
 
   forceRender = () => requestAnimationFrame(() => {
@@ -125,9 +125,6 @@ class PatternLock {
 
     this.setInitialState();
     this._onResize();
-    if (rerender) {
-      this.forceRender();
-    }
 
     return this;
   }
@@ -268,7 +265,6 @@ class PatternLock {
     ];
 
     this.setInitialState();
-    this.forceRender();
 
     this._emitPatternStart();
     this._isDragging = true;

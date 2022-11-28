@@ -51,7 +51,7 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
             height,
             grid: [rows, cols],
             theme,
-            themeState: themeState ?? DEFAULT_THEME_STATE.INITIAL,
+            themeState: themeState || DEFAULT_THEME_STATE.INITIAL,
             justifyNodes,
           }),
         );

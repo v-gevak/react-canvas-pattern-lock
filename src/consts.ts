@@ -21,7 +21,7 @@ const dimens = {
 const baseColors = {
   primary: '#c5c5c7',
   bg: '#fff',
-  ringBg: '#f8f8f8',
+  ringBg: 'rgba(11, 31, 53, 0.05)',
 };
 
 export const DEFAULT_LIGHT_THEME: Theme = {
@@ -29,7 +29,7 @@ export const DEFAULT_LIGHT_THEME: Theme = {
     colors: {
       ...baseColors,
       accent: '#000',
-      selectedRingBg: '#e6e6e6',
+      selectedRingBg: 'rgba(11, 31, 53, 0.1)',
     },
     dimens,
   },

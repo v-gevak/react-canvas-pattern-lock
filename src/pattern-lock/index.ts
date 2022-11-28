@@ -450,19 +450,35 @@ class PatternLock {
       this.renderGrid();
 
       // Plot all the selected nodes
-      const lastNode = this.selectedNodes.reduce((prevNode, node) => {
+      const lastNode = this.selectedNodes.reduce((prevNode, node, idx) => {
         if (prevNode) {
-          const nodeCoords = this._getCoords(node.col, node.row);
-          const prevNodeInterval = this._getCoords(prevNode.col, prevNode.row);
-          const p1 = { x: nodeCoords.x, y: nodeCoords.y };
-          const p2 = { x: prevNodeInterval.x, y: prevNodeInterval.y };
+          const prevNodeCoords = this._getCoords(prevNode.col, prevNode.row);
 
-          // Make the two selected nodes bigger
-          this.drawNode(p1.x, p1.y, accent, primary, ringWidth + 3, selectedRingBg);
-          this.drawNode(p2.x, p2.y, accent, primary, ringWidth + 3, selectedRingBg);
+          this.drawNode(
+            prevNodeCoords.x,
+            prevNodeCoords.y,
+            accent,
+            primary,
+            ringWidth + 3,
+            selectedRingBg,
+          );
 
           if (!this.coordinates) {
-            this.drawLine();
+            const isLastNode = this.selectedNodes.length - 1 === idx;
+
+            if (isLastNode) {
+              const nodeCoords = this._getCoords(node.col, node.row);
+
+              this.drawNode(
+                nodeCoords.x,
+                nodeCoords.y,
+                accent,
+                primary,
+                ringWidth + 3,
+                selectedRingBg,
+              );
+              this.drawLine();
+            }
           }
         }
 
@@ -476,7 +492,6 @@ class PatternLock {
           y: coords.y,
         };
 
-        // Draw the last node
         this.drawNode(
           lastPoint.x,
           lastPoint.y,
@@ -553,7 +568,14 @@ class PatternLock {
       this.ctx.strokeStyle = borderColor || primary;
       this.ctx.fillStyle = ringBgColor || ringBg;
 
-      // Draw outer circle
+      // clear circle
+      this.ctx.globalCompositeOperation = 'destination-out';
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.globalCompositeOperation = 'source-over';
+
+      // Draw outer circle.
       this.ctx.beginPath();
       this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
       this.ctx.fill();

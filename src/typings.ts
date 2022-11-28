@@ -80,6 +80,11 @@ export type TPatternLockInstance = {
      * Функция изменения темы.
      */
     setThemeState: (themeName: string) => void;
+
+    /**
+     * Установить состояние по умолчанию.
+     */
+    setInitialState: () => void;
 };
 
 export type TProps = {
@@ -114,7 +119,7 @@ export type TProps = {
     cols?: number;
 
     /**
-     * Коллбек, вызываемый после заполнения.
+     * Коллбек, вызываемый после завершения ввода кода.
      */
     onComplete?: (code: number[], nodes: TNodes) => void;
 

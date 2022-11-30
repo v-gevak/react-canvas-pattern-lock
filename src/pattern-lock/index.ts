@@ -1,9 +1,9 @@
 import { registerEvent } from '../utils/dom';
 import EventBus from '../utils/EventBus';
-import { gcd, prop } from '../utils/libs';
+import { colorHasAlpha, gcd, prop } from '../utils/libs';
 import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE, JUSTIFY_NODES_OPTION } from '../consts';
 import {
-  TPatternLockOptions, Theme, ThemeParams, TNodes,
+  Theme, ThemeParams, TNodes, TPatternLockOptions,
 } from '../typings';
 
 const createInvalidOptionError = (option: string) => new Error(`Invalid or empty ${option} passed`);
@@ -14,11 +14,15 @@ const events = {
 };
 
 class PatternLock {
-  _config: TPatternLockOptions | null = null;
+  autoHide: boolean = false;
 
-  $canvas: HTMLCanvasElement | null = null;
+  autoHideTimeout: number = 400;
 
-  ctx: CanvasRenderingContext2D | null = null;
+  _initialConfig!: TPatternLockOptions;
+
+  $canvas!: HTMLCanvasElement;
+
+  ctx!: CanvasRenderingContext2D;
 
   _subscriptions: Function[] = [];
 
@@ -34,7 +38,7 @@ class PatternLock {
 
   coordinates: {x: number, y: number} | null = null;
 
-  selectedNodes: Array<{row: number, col: number}> = [];
+  selectedNodes: Array<{row: number, col: number, pushedAt?: number}> = [];
 
   lastSelectedNode: typeof this.selectedNodes[number] | null = null;
 
@@ -48,9 +52,13 @@ class PatternLock {
 
   calculationLoopRaf: number = 0;
 
+  resetTimeoutId = 0;
+
   dragListeners: Array<Function> = [];
 
   bounds: {x: number, y: number} = { x: 0, y: 0 };
+
+  startDragTimeStamp: number | null = null;
 
   constructor(config: TPatternLockOptions) {
     if (!config.$canvas) throw createInvalidOptionError('$canvas');
@@ -65,14 +73,16 @@ class PatternLock {
       theme,
       width,
       height,
-      themeState,
+      themeStateKey,
       justifyNodes,
     } = config;
-    this._config = config;
+    this._initialConfig = config;
     this.$canvas = $canvas;
-    this.ctx = this.$canvas.getContext('2d');
+    this.autoHide = config.autoHide;
+    this.autoHideTimeout = config.autoHideTimeout;
+    this.ctx = this.$canvas.getContext('2d')!;
     this.theme = theme;
-    this.themeState = theme[themeState];
+    this.themeState = theme[themeStateKey];
     this.justifyNodes = justifyNodes;
 
     this.setDimensions({ width, height });
@@ -85,25 +95,20 @@ class PatternLock {
     this.dimens = dimens;
     const ratio = window.devicePixelRatio;
 
-    if (this.$canvas) {
-      this.$canvas.width = this.dimens.width * ratio;
-      this.$canvas.height = this.dimens.height * ratio;
-      this.$canvas.style.width = `${this.dimens.width}px`;
-      this.$canvas.style.height = `${this.dimens.height}px`;
-    }
+    this.$canvas.width = this.dimens.width * ratio;
+    this.$canvas.height = this.dimens.height * ratio;
+    this.$canvas.style.width = `${this.dimens.width}px`;
+    this.$canvas.style.height = `${this.dimens.height}px`;
 
-    if (this.ctx) {
-      this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    }
+    this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
 
   setInitialState() {
     this.coordinates = null;
     this.selectedNodes = [];
     this.lastSelectedNode = null;
-    if (this._config) {
-      this.themeState = this.theme[this._config.themeState];
-    }
+    this.themeState = this.theme[this._initialConfig.themeStateKey];
+
     this.forceRender();
   }
 
@@ -161,9 +166,16 @@ class PatternLock {
 
   // Event handler stuff start
   destroy = () => {
+    this._stopDragging();
+    this._subscriptions.map((fn) => fn());
+  };
+
+  _stopDragging = () => {
     cancelAnimationFrame(this.renderLoopRaf);
     cancelAnimationFrame(this.calculationLoopRaf);
-    this._subscriptions.map((fn) => fn());
+    clearTimeout(this.resetTimeoutId);
+    this._isDragging = false;
+    this.startDragTimeStamp = null;
   };
 
   on(event: string, fn: Function) {
@@ -252,6 +264,7 @@ class PatternLock {
   _onResize = () => requestAnimationFrame(this.recalculateBounds);
 
   _onTouchStart = (e: Event) => {
+    this._stopDragging();
     requestAnimationFrame(this.recalculateBounds);
 
     // Start frame loops
@@ -273,9 +286,6 @@ class PatternLock {
   _onTouchStop = (e?: Event) => {
     if (e) e.preventDefault();
 
-    cancelAnimationFrame(this.renderLoopRaf);
-    cancelAnimationFrame(this.calculationLoopRaf);
-
     (this.dragListeners || []).forEach((fn) => fn());
     this._subscriptions = this._subscriptions.filter(
       (fn) => !(this.dragListeners || []).includes(fn),
@@ -288,7 +298,11 @@ class PatternLock {
       this._emitPatternComplete();
     }
 
-    this._isDragging = false;
+    if (this.autoHide) {
+      this.resetTimeoutId = window.setTimeout(this._stopDragging, 2 * this.autoHideTimeout);
+    } else {
+      this._stopDragging();
+    }
   };
 
   _onTouchMove = (e: Event) => {
@@ -405,6 +419,21 @@ class PatternLock {
     return finalStep;
   }
 
+  getElapsedTime = (value: boolean | number) => {
+    let timeStamp: number;
+    if (typeof value === 'boolean') {
+      timeStamp = performance.now();
+    } else {
+      timeStamp = value;
+    }
+
+    if (!this.startDragTimeStamp) {
+      this.startDragTimeStamp = timeStamp;
+    }
+
+    return timeStamp - this.startDragTimeStamp;
+  };
+
   // Calculate the state of the lock for the next frame
   calculationLoop = (runLoop:boolean | number = true) => {
     if (this._isDragging && this.coordinates) {
@@ -438,80 +467,11 @@ class PatternLock {
   // Render the state of the lock
   renderLoop = (runLoop: boolean | number = true) => {
     if (this._isDragging) {
-      const {
-        colors: { accent, primary, selectedRingBg },
-        dimens: { nodeRing: ringWidth },
-      } = this.themeState;
-
-      // Clear the canvas(Redundant)
-      this.ctx!.clearRect(0, 0, this.dimens.width, this.dimens.height);
+      const elapsed = this.getElapsedTime(runLoop);
 
       // Paint the grid
       this.renderGrid();
-
-      // Plot all the selected nodes
-      const lastNode = this.selectedNodes.reduce((prevNode, node, idx) => {
-        if (prevNode) {
-          const prevNodeCoords = this._getCoords(prevNode.col, prevNode.row);
-
-          this.drawNode(
-            prevNodeCoords.x,
-            prevNodeCoords.y,
-            accent,
-            primary,
-            ringWidth + 3,
-            selectedRingBg,
-          );
-
-          if (!this.coordinates) {
-            const isLastNode = this.selectedNodes.length - 1 === idx;
-
-            if (isLastNode) {
-              const nodeCoords = this._getCoords(node.col, node.row);
-
-              this.drawNode(
-                nodeCoords.x,
-                nodeCoords.y,
-                accent,
-                primary,
-                ringWidth + 3,
-                selectedRingBg,
-              );
-              this.drawLine();
-            }
-          }
-        }
-
-        return node;
-      }, null as TNodes[number] | null);
-
-      if (lastNode && this.coordinates) {
-        const coords = this._getCoords(lastNode.col, lastNode.row);
-        const lastPoint = {
-          x: coords.x,
-          y: coords.y,
-        };
-
-        this.drawNode(
-          lastPoint.x,
-          lastPoint.y,
-          accent,
-          primary,
-          ringWidth + 6,
-          selectedRingBg,
-        );
-
-        this.drawLine();
-
-        // Draw a line between last node to the current drag position
-        this.joinNodes(
-          lastPoint.x,
-          lastPoint.y,
-          this.coordinates.x,
-          this.coordinates.y,
-          true,
-        );
-      }
+      this.drawSelected(elapsed);
     }
 
     if (runLoop) {
@@ -521,8 +481,8 @@ class PatternLock {
 
   // Render the grid to the canvas
   renderGrid() {
-    this.ctx!.fillStyle = this.themeState.colors.bg;
-    this.ctx!.fillRect(0, 0, this.dimens.width, this.dimens.height);
+    this.ctx.fillStyle = this.themeState.colors.bg;
+    this.ctx.fillRect(0, 0, this.dimens.width, this.dimens.height);
 
     // Draw all the nodes
     this.forEachNode(this.drawNode.bind(this));
@@ -554,49 +514,65 @@ class PatternLock {
     y:number,
     centerColor: string,
     borderColor: string,
-    size: number,
     ringBgColor: string,
+    alpha = 1,
   ) {
-    if (this.ctx) {
-      const {
-        dimens: { nodeRing: ringWidth, nodeRadius: ringRadius, nodeCore: coreRadius },
-        colors: { primary, ringBg },
-      } = this.themeState;
+    const {
+      dimens: { nodeRadius: ringRadius, nodeCore: coreRadius },
+      colors: { primary, ringBg },
+    } = this.themeState;
 
-      // Config
-      this.ctx.lineWidth = size || ringWidth;
-      this.ctx.strokeStyle = borderColor || primary;
-      this.ctx.fillStyle = ringBgColor || ringBg;
+    // Config
+    this.ctx.strokeStyle = borderColor || primary;
+    this.ctx.fillStyle = ringBgColor || ringBg;
 
-      // clear circle
-      this.ctx.globalCompositeOperation = 'destination-out';
+    // clear circle
+    this.ctx.globalCompositeOperation = 'destination-out';
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.globalCompositeOperation = 'source-over';
+
+    this.ctx.globalAlpha = Math.max(alpha, 0);
+    // Draw outer circle.
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    if (this.autoHide && !colorHasAlpha(this.ctx.fillStyle)) {
+      this.ctx.globalAlpha = 1 - this.ctx.globalAlpha;
+      this.ctx.fillStyle = ringBg;
       this.ctx.beginPath();
       this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
       this.ctx.fill();
-      this.ctx.globalCompositeOperation = 'source-over';
+    }
 
-      // Draw outer circle.
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
-      this.ctx.fill();
+    // Draw inner circle
+    this.ctx.fillStyle = centerColor || primary;
+    this.ctx.globalAlpha = alpha > 0.25 ? 1 : Math.max(alpha + 0.75, 0);
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
+    this.ctx.fill();
 
-      this.ctx.fillStyle = centerColor || primary;
-
-      // Draw inner circle
+    if (this.autoHide && !colorHasAlpha(this.ctx.fillStyle)) {
+      this.ctx.fillStyle = primary;
+      this.ctx.globalAlpha = 1 - this.ctx.globalAlpha;
       this.ctx.beginPath();
       this.ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
       this.ctx.fill();
-
-      if (ringWidth > 0) {
-      // Draw outer ring
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
-        this.ctx.stroke();
-      }
     }
+    this.ctx.globalAlpha = 1;
   }
 
-  joinNodes(col1: number, row1: number, col2: number, row2: number, isCoordinates = false) {
+  joinNodes(
+    col1: number,
+    row1: number,
+    col2: number,
+    row2: number,
+    isCoordinates = false,
+    alpha = 1,
+  ) {
+    this.ctx.globalAlpha = Math.max(alpha, 0);
     const coords1 = this._getCoords(col1, row1);
     const coords2 = this._getCoords(col2, row2);
 
@@ -608,29 +584,112 @@ class PatternLock {
       point2 = { x: col2, y: row2 };
     }
 
-    if (this.ctx) {
-      this.ctx.lineWidth = this.themeState.dimens.lineWidth;
-      this.ctx.strokeStyle = this.themeState.colors.accent;
-      this.ctx.lineCap = 'round';
+    this.ctx.lineWidth = this.themeState.dimens.lineWidth;
+    this.ctx.strokeStyle = this.themeState.colors.accent;
+    this.ctx.lineCap = 'round';
 
-      // Draw line
-      this.ctx.beginPath();
-      this.ctx.moveTo(point1.x, point1.y);
-      this.ctx.lineTo(point2.x, point2.y);
-      this.ctx.stroke();
-    }
+    // Draw line
+    this.ctx.beginPath();
+    this.ctx.moveTo(point1.x, point1.y);
+    this.ctx.lineTo(point2.x, point2.y);
+    this.ctx.stroke();
+    this.ctx.globalAlpha = 1;
   }
 
-  drawLine = () => {
-    if (this.selectedNodes.length > 1) {
-      for (let i = 1; i < this.selectedNodes.length; i += 1) {
+  drawSelected = (elapsedTime: number) => {
+    const { colors: { accent, primary, selectedRingBg } } = this.themeState;
+    const nodesCount = this.selectedNodes.length;
+
+    const getAlpha = (pushedAt?: number) => (
+      pushedAt
+        ? 1 - ((elapsedTime - pushedAt) / this.autoHideTimeout)
+        : 1);
+
+    const drawNodes = () => {
+      let lastPointCoords;
+
+      for (let i = 0; i < nodesCount; i += 1) {
         const prev = this.selectedNodes[i - 1];
         const curr = this.selectedNodes[i];
+
+        if (this.autoHide && !curr.pushedAt) {
+          curr.pushedAt = elapsedTime;
+        }
+
+        const pointCoords = this._getCoords(curr.col, curr.row);
+        const isLastNode = nodesCount - 1 === i;
+
+        if (isLastNode) {
+          lastPointCoords = pointCoords;
+        }
+
         if (curr && prev) {
-          this.joinNodes(prev.col, prev.row, curr.col, curr.row);
+          const prevPointCoords = this._getCoords(prev.col, prev.row);
+          const alpha = getAlpha(curr.pushedAt);
+
+          if (!this.coordinates && isLastNode) {
+            this.drawNode(
+              pointCoords.x,
+              pointCoords.y,
+              accent,
+              primary,
+              selectedRingBg,
+              alpha,
+            );
+          }
+
+          this.drawNode(
+            prevPointCoords.x,
+            prevPointCoords.y,
+            accent,
+            primary,
+            selectedRingBg,
+            alpha,
+          );
         }
       }
-    }
+
+      if (lastPointCoords && this.coordinates) {
+        this.drawNode(lastPointCoords.x, lastPointCoords.y, accent, primary, selectedRingBg);
+      }
+    };
+
+    const drawLines = () => {
+      let lastPointCoords;
+
+      for (let i = 0; i < nodesCount; i += 1) {
+        const prev = this.selectedNodes[i - 1];
+        const curr = this.selectedNodes[i];
+
+        const pointCoords = this._getCoords(curr.col, curr.row);
+        const isLastNode = nodesCount - 1 === i;
+
+        if (isLastNode) {
+          lastPointCoords = pointCoords;
+        }
+
+        if (curr && prev) {
+          const alpha = getAlpha(curr.pushedAt);
+
+          this.joinNodes(prev.col, prev.row, curr.col, curr.row, false, alpha);
+        }
+      }
+
+      if (lastPointCoords && this.coordinates) {
+        // Draw a line between last node to the current drag position
+        this.joinNodes(
+          lastPointCoords.x,
+          lastPointCoords.y,
+          this.coordinates.x,
+          this.coordinates.y,
+          true,
+        );
+      }
+    };
+
+    drawNodes();
+    // draw lines over nodes
+    drawLines();
   };
 }
 

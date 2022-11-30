@@ -53,11 +53,6 @@ export type ThemeParams = {
          * Радиус внутренней окружности узла.
          */
         nodeCore: number;
-
-        /**
-         * Толщина внешней линии узла.
-         */
-        nodeRing: number;
     };
 }
 
@@ -87,7 +82,20 @@ export type TPatternLockInstance = {
     setInitialState: () => void;
 };
 
-export type TProps = {
+export type ReactPatternLockProps = {
+    /**
+     * При включенном параметре выбранные узлы и линия, соединияющая их,
+     * будут исчезать по истечении autoHideTimeout.
+     * @default false
+     */
+    autoHide?: boolean;
+
+    /**
+     * Таймаут автоматического исчезнование выбранных узлов и линии в миллисекундах.
+     * @default 400
+     */
+    autoHideTimeout?: number;
+
     /**
      * Метод выравнивания узлов.
      * @default space-available
@@ -141,10 +149,12 @@ export type TProps = {
 
 export type TPatternLockOptions = {
     $canvas: HTMLCanvasElement;
+    autoHide:boolean;
+    autoHideTimeout: number
     width: number;
     height:number;
     grid: [number, number],
     theme: Theme;
-    themeState: string;
+    themeStateKey: string;
     justifyNodes: 'space-around' | 'space-between'
 };

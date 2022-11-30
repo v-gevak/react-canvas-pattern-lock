@@ -15,7 +15,6 @@ const dimens = {
   nodeRadius: 37.5,
   lineWidth: 6,
   nodeCore: 12.5,
-  nodeRing: 0,
 };
 
 const baseColors = {

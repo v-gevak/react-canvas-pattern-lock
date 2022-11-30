@@ -14,5 +14,10 @@ module.exports = {
   },
   "staticDirs": [
     "../public"
-  ]
+  ],
+  webpackFinal: (config) => {
+    config.plugins = config.plugins.filter(p => p.constructor.name !== 'ESLintWebpackPlugin');
+
+    return config;
+  }
 }

@@ -1,19 +1,25 @@
-import React, { forwardRef, useEffect, useRef } from 'react';
+import React, {
+  forwardRef, useEffect, useLayoutEffect, useRef,
+} from 'react';
 import mergeRefs from 'react-merge-refs';
 
 import useEvent from 'react-use-event-hook';
 import { PatternLock } from './pattern-lock';
 import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE } from './consts';
 import type {
-  TProps, TNodes, TPatternLockInstance,
+  ReactPatternLockProps, TNodes, TPatternLockInstance,
 } from './typings';
 import { nodesToCode } from './utils/libs';
 
-export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
+const useLayoutEffectSafeForSsr = typeof document !== 'undefined' ? useLayoutEffect : useEffect;
+
+export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, ReactPatternLockProps>(
   (
     {
       width = 315,
       height = 315,
+      autoHide = false,
+      autoHideTimeout = 400,
       onComplete,
       themeState,
       onDragStart,
@@ -41,17 +47,19 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
       }
     });
 
-    useEffect(() => {
+    useLayoutEffectSafeForSsr(() => {
       const patternLockVar = patternLockInnerRef;
       if (canvasRef.current) {
         mergeRefs([ref, patternLockVar])(
           new PatternLock({
             $canvas: canvasRef.current,
+            autoHide,
+            autoHideTimeout,
             width,
             height,
             grid: [rows, cols],
             theme,
-            themeState: themeState || DEFAULT_THEME_STATE.INITIAL,
+            themeStateKey: themeState || DEFAULT_THEME_STATE.INITIAL,
             justifyNodes,
           }),
         );
@@ -67,6 +75,8 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, TProps>(
         patternLockInnerRef.current = undefined;
       };
     }, [
+      autoHide,
+      autoHideTimeout,
       width,
       height,
       justifyNodes,

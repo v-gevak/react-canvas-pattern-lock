@@ -1,8 +1,15 @@
 {
+  "compilationOptions": {
+    "preferredConfigPath": "./tsconfig.json"
+  },
   "entries": [
     {
       "filePath": "./src/index.ts",
       "outFile": "./dist/index.d.ts"
+    },
+    {
+      "filePath": "./src/index.ts",
+      "outFile": "./dist/esm/index.d.ts"
     }
   ]
 }

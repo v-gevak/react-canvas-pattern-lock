@@ -7,6 +7,7 @@ export default {
     {
       file: 'dist/index.js',
       format: 'cjs',
+      interop: 'compat',
     },
     {
       file: 'dist/esm/index.js',

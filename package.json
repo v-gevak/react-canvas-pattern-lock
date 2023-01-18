@@ -1,6 +1,7 @@
 {
   "name": "react-canvas-pattern-lock",
-  "version": "1.0.1",
+  "version": "1.0.2",
+  "description": "Android's react pattern lock",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/esm/index.js",
@@ -13,6 +14,18 @@
     "build": "yarn build:ts && yarn build:dts",
     "build:ts": "rollup -c",
     "build:dts": "dts-bundle-generator --no-banner --config dts.json"
+  },
+  "keywords": [
+    "react",
+    "canvas",
+    "pattern",
+    "lock"
+  ],
+  "author": "Lacronts <ikuz58@gmail.com>",
+  "homepage": "https://github.com/Lacronts/react-canvas-pattern-lock#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lacronts/react-canvas-pattern-lock.git"
   },
   "dependencies": {
     "react-merge-refs": "^1.1.0",

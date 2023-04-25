@@ -58,6 +58,8 @@ class PatternLock {
 
   bounds: {x: number, y: number} = { x: 0, y: 0 };
 
+  extraBounds: [number, number, number, number] = [0, 0, 0, 0];
+
   startDragTimeStamp: number | null = null;
 
   constructor(config: TPatternLockOptions) {
@@ -75,6 +77,7 @@ class PatternLock {
       height,
       themeStateKey,
       justifyNodes,
+      extraBounds,
     } = config;
     this._initialConfig = config;
     this.$canvas = $canvas;
@@ -84,6 +87,7 @@ class PatternLock {
     this.theme = theme;
     this.themeState = theme[themeStateKey];
     this.justifyNodes = justifyNodes;
+    this.extraBounds = extraBounds;
 
     this.setDimensions({ width, height });
     this.setGrid(grid[0], grid[1]);
@@ -334,7 +338,10 @@ class PatternLock {
   isPointInCanvas = ({ x, y } : {x: number, y: number}) => {
     const w = this.dimens.width;
     const h = this.dimens.height;
-    return x <= w && x > 0 && y <= h && y > 0;
+    const [top, right, bottom, left] = this.extraBounds;
+
+    console.log(x, y);
+    return x <= w + right && x > 0 - left && y <= h + bottom && y > 0 - top;
   };
 
   /*

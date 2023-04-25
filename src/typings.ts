@@ -104,13 +104,13 @@ export type ReactPatternLockProps = {
 
     /**
      * Ширина в пикселях.
-     * @defaut 315
+     * @default 315
      */
     width?: number;
 
     /**
      * Высота в пикселях.
-     * @defaut 315
+     * @default 315
      */
     height?: number;
 
@@ -145,6 +145,13 @@ export type ReactPatternLockProps = {
      * Тема.
      */
     theme?: Theme;
+
+    /**
+     * Дополнительные границы в пикселях.
+     * Свойство позволяет расширить область прослушивания touch события.
+     * По-умолчанию область ограничена размерами canvas.
+     */
+    extraBounds?: [number, number, number, number];
 };
 
 export type TPatternLockOptions = {
@@ -157,4 +164,5 @@ export type TPatternLockOptions = {
     theme: Theme;
     themeStateKey: string;
     justifyNodes: 'space-around' | 'space-between'
+    extraBounds: [number, number, number, number];
 };

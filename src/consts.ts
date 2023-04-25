@@ -1,5 +1,7 @@
 import { Theme } from './typings';
 
+export const DEFAULT_EXTRA_BOUNDS: [number, number, number, number] = [25, 25, 25, 25];
+
 export const JUSTIFY_NODES_OPTION = {
   SPACE_AVAILABLE: 'space-around',
   SPACE_BETWEEN: 'space-between',

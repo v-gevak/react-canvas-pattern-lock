@@ -5,15 +5,20 @@ import mergeRefs from 'react-merge-refs';
 
 import useEvent from 'react-use-event-hook';
 import { PatternLock } from './pattern-lock';
-import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE } from './consts';
+import { DEFAULT_EXTRA_BOUNDS, DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE } from './consts';
 import type {
-  ReactPatternLockProps, TNodes, TPatternLockInstance,
+  ReactPatternLockProps,
+  TNodes,
+  TPatternLockInstance,
 } from './typings';
 import { nodesToCode } from './utils/libs';
 
 const useLayoutEffectSafeForSsr = typeof document !== 'undefined' ? useLayoutEffect : useEffect;
 
-export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, ReactPatternLockProps>(
+export const ReactCanvasPatternLock = forwardRef<
+  TPatternLockInstance,
+  ReactPatternLockProps
+>(
   (
     {
       width = 315,
@@ -27,6 +32,7 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, ReactPatt
       justifyNodes = 'space-around',
       rows = 3,
       cols = 3,
+      extraBounds = DEFAULT_EXTRA_BOUNDS,
     },
     ref,
   ) => {
@@ -61,6 +67,7 @@ export const ReactCanvasPatternLock = forwardRef<TPatternLockInstance, ReactPatt
             theme,
             themeStateKey: themeState || DEFAULT_THEME_STATE.INITIAL,
             justifyNodes,
+            extraBounds,
           }),
         );
 

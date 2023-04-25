@@ -340,7 +340,6 @@ class PatternLock {
     const h = this.dimens.height;
     const [top, right, bottom, left] = this.extraBounds;
 
-    console.log(x, y);
     return x <= w + right && x > 0 - left && y <= h + bottom && y > 0 - top;
   };
 

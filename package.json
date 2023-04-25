@@ -1,6 +1,6 @@
 {
   "name": "react-canvas-pattern-lock",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Android's react pattern lock",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

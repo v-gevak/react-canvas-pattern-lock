@@ -60,6 +60,8 @@ class PatternLock {
 
   extraBounds: [number, number, number, number] = [0, 0, 0, 0];
 
+  hover: boolean = false;
+
   startDragTimeStamp: number | null = null;
 
   constructor(config: TPatternLockOptions) {
@@ -78,6 +80,7 @@ class PatternLock {
       themeStateKey,
       justifyNodes,
       extraBounds,
+      hover,
     } = config;
     this._initialConfig = config;
     this.$canvas = $canvas;
@@ -88,6 +91,7 @@ class PatternLock {
     this.themeState = theme[themeStateKey];
     this.justifyNodes = justifyNodes;
     this.extraBounds = extraBounds;
+    this.hover = hover;
 
     this.setDimensions({ width, height });
     this.setGrid(grid[0], grid[1]);
@@ -166,6 +170,9 @@ class PatternLock {
   attachEventHandlers() {
     this.registerEventListener(this.$canvas, 'mousedown touchstart', this._onTouchStart);
     this.registerEventListener(window, 'resize', this._onResize);
+    if (this.hover) {
+      this.registerEventListener(this.$canvas, 'mousemove', this._handleMouseMove);
+    }
   }
 
   // Event handler stuff start
@@ -222,6 +229,18 @@ class PatternLock {
     }
 
     return { x, y };
+  };
+
+  _getMousePointFromEvent = (e: Event) => {
+    const mousePoint = {
+      x: prop('pageX', e) || prop('touches.0.pageX', e) || 0,
+      y: prop('pageY', e) || prop('touches.0.pageY', e) || 0,
+    };
+
+    return {
+      x: mousePoint.x - this.bounds.x,
+      y: mousePoint.y - this.bounds.y,
+    };
   };
 
   _findPosByCoord = (coord: number, dimen:number, nodesCount:number) => {
@@ -313,15 +332,7 @@ class PatternLock {
     if (e) e.preventDefault();
 
     if (this._isDragging) {
-      let mousePoint = {
-        x: prop('pageX', e) || prop('touches.0.pageX', e) || 0,
-        y: prop('pageY', e) || prop('touches.0.pageY', e) || 0,
-      };
-
-      mousePoint = {
-        x: mousePoint.x - this.bounds.x,
-        y: mousePoint.y - this.bounds.y,
-      };
+      const mousePoint = this._getMousePointFromEvent(e);
 
       if (this.isPointInCanvas(mousePoint)) {
         this.coordinates = mousePoint;
@@ -330,6 +341,25 @@ class PatternLock {
       }
     }
   };
+
+  _handleMouseMove = (e: Event) => {
+    const mousePoint = this._getMousePointFromEvent(e);
+
+    if (!this._isDragging && this.isPointInCanvas(mousePoint)) {
+      this.coordinates = mousePoint;
+      this.recalculateBounds();
+
+      this.calculationLoop(false);
+
+      if (e) e.preventDefault();
+    }
+  };
+
+  renderHoverEffect(x: number, y: number) {
+    const { colors: { bg, hover: { inner, outer } } } = this.themeState;
+    this.drawNode(x, y, bg, bg, bg);
+    this.drawNode(x, y, inner, outer, outer);
+  }
 
   /*
      * Checks if given point is within the boundaries of the canvas
@@ -442,6 +472,8 @@ class PatternLock {
 
   // Calculate the state of the lock for the next frame
   calculationLoop = (runLoop:boolean | number = true) => {
+    const { dimens, colors: { bg } } = this.themeState;
+
     if (this._isDragging && this.coordinates) {
       // eslint-disable-next-line consistent-return
       this.forEachNode((x: number, y: number) => {
@@ -449,7 +481,7 @@ class PatternLock {
           (this.coordinates!.x - x) ** 2 + (this.coordinates!.y - y) ** 2,
         );
 
-        if (dist < this.themeState.dimens.nodeRadius + 1) {
+        if (dist < dimens.nodeRadius + 1) {
           const col = this._findColByX(x);
           const row = this._findRowByY(y);
 
@@ -461,6 +493,32 @@ class PatternLock {
 
             return false;
           }
+        }
+      });
+    }
+
+    if (!this._isDragging && this.coordinates && this.hover) {
+      this.forEachNode((x: number, y: number) => {
+        const dist = Math.sqrt(
+          (this.coordinates!.x - x) ** 2 + (this.coordinates!.y - y) ** 2,
+        );
+        const col = this._findColByX(x);
+        const row = this._findRowByY(y);
+
+        const isSelected = this.selectedNodes.findIndex(
+          (sNode) => sNode.col === col && sNode.row === row,
+        ) !== -1;
+
+        if (isSelected) return;
+
+        if (dist < dimens.nodeRadius + 1) {
+          const currentNode = { col, row };
+          const coords = this._getCoords(currentNode.col, currentNode.row);
+
+          this.renderHoverEffect(coords.x, coords.y);
+        } else {
+          this.drawNode(x, y, bg, bg, bg);
+          this.drawNode(x, y);
         }
       });
     }
@@ -518,9 +576,9 @@ class PatternLock {
   drawNode(
     x: number,
     y:number,
-    centerColor: string,
-    borderColor: string,
-    ringBgColor: string,
+    centerColor?: string,
+    borderColor?: string,
+    ringBgColor?: string,
     alpha = 1,
   ) {
     const {
@@ -535,7 +593,7 @@ class PatternLock {
     // clear circle
     this.ctx.globalCompositeOperation = 'destination-out';
     this.ctx.beginPath();
-    this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+    this.ctx.arc(x, y, ringRadius + 2, 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.globalCompositeOperation = 'source-over';
 

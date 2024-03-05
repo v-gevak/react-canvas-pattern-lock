@@ -23,6 +23,10 @@ const baseColors = {
   primary: '#c5c5c7',
   bg: '#fff',
   ringBg: 'rgba(11, 31, 53, 0.05)',
+  hover: {
+    inner: '#a0a1a9',
+    outer: 'rgba(15, 25, 55, 0.1)',
+  },
 };
 
 export const DEFAULT_LIGHT_THEME: Theme = {

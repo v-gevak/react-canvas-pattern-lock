@@ -4,6 +4,11 @@ export type TGrid = [number, number];
 
 export type OnCompleteCallback = (nodes: TNodes) => void;
 
+export type Hover = {
+    inner: string,
+    outer: string
+}
+
 export type ThemeParams = {
     /**
      * Цвета.
@@ -33,6 +38,11 @@ export type ThemeParams = {
          * Внешний цвет заливки выбранного узла.
          */
         selectedRingBg: string;
+
+        /**
+        * Ховер узла.
+        */
+        hover: Hover;
     };
 
     /**
@@ -152,6 +162,11 @@ export type ReactPatternLockProps = {
      * По-умолчанию область ограничена размерами canvas.
      */
     extraBounds?: [number, number, number, number];
+
+    /**
+     * Включает ховер-эффект
+     */
+    hover?: boolean;
 };
 
 export type TPatternLockOptions = {
@@ -165,4 +180,5 @@ export type TPatternLockOptions = {
     themeStateKey: string;
     justifyNodes: 'space-around' | 'space-between'
     extraBounds: [number, number, number, number];
+    hover: boolean;
 };

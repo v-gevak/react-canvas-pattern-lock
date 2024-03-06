@@ -33,6 +33,7 @@ export const ReactCanvasPatternLock = forwardRef<
       rows = 3,
       cols = 3,
       extraBounds = DEFAULT_EXTRA_BOUNDS,
+      hover = false,
     },
     ref,
   ) => {
@@ -68,6 +69,7 @@ export const ReactCanvasPatternLock = forwardRef<
             themeStateKey: themeState || DEFAULT_THEME_STATE.INITIAL,
             justifyNodes,
             extraBounds,
+            hover,
           }),
         );
 
@@ -91,6 +93,7 @@ export const ReactCanvasPatternLock = forwardRef<
       cols,
       ref,
       theme,
+      hover,
       handleComplete,
       handleDragStart,
     ]);

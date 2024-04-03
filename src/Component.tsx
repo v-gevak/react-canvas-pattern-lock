@@ -23,8 +23,6 @@ export const ReactCanvasPatternLock = forwardRef<
     {
       width = 315,
       height = 315,
-      autoHide = false,
-      autoHideTimeout = 400,
       onComplete,
       themeState,
       onDragStart,
@@ -60,8 +58,6 @@ export const ReactCanvasPatternLock = forwardRef<
         mergeRefs([ref, patternLockVar])(
           new PatternLock({
             $canvas: canvasRef.current,
-            autoHide,
-            autoHideTimeout,
             width,
             height,
             grid: [rows, cols],
@@ -84,8 +80,6 @@ export const ReactCanvasPatternLock = forwardRef<
         patternLockInnerRef.current = undefined;
       };
     }, [
-      autoHide,
-      autoHideTimeout,
       width,
       height,
       justifyNodes,

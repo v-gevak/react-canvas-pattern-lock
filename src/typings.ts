@@ -94,19 +94,6 @@ export type TPatternLockInstance = {
 
 export type ReactPatternLockProps = {
     /**
-     * При включенном параметре выбранные узлы и линия, соединияющая их,
-     * будут исчезать по истечении autoHideTimeout.
-     * @default false
-     */
-    autoHide?: boolean;
-
-    /**
-     * Таймаут автоматического исчезнование выбранных узлов и линии в миллисекундах.
-     * @default 400
-     */
-    autoHideTimeout?: number;
-
-    /**
      * Метод выравнивания узлов.
      * @default space-available
      */
@@ -171,8 +158,6 @@ export type ReactPatternLockProps = {
 
 export type TPatternLockOptions = {
     $canvas: HTMLCanvasElement;
-    autoHide:boolean;
-    autoHideTimeout: number
     width: number;
     height:number;
     grid: [number, number],

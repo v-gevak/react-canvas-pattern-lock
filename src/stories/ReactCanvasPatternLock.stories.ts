@@ -7,7 +7,39 @@ const meta: Meta<typeof ReactCanvasPatternLock> = {
   title: 'Example/ReactCanvasPatternLock',
   component: ReactCanvasPatternLock,
   tags: ['docsPage'],
-  argTypes: {},
+  argTypes: {
+    width: {
+      control: {
+        type: 'number',
+      },
+    },
+    height: {
+      control: {
+        type: 'number',
+      },
+    },
+    extraBounds: {
+      control: {
+        type: 'object',
+      },
+    },
+    justifyNodes: {
+      options: ['space-around', 'space-between'],
+      control: {
+        type: 'select',
+      },
+    },
+    cols: {
+      control: {
+        type: 'number',
+      },
+    },
+    rows: {
+      control: {
+        type: 'number',
+      },
+    },
+  },
 };
 
 export default meta;
@@ -17,5 +49,6 @@ type Story = StoryObj<typeof ReactCanvasPatternLock>;
 export const General: Story = {
   args: {
     justifyNodes: 'space-around',
+    hover: true,
   },
 };

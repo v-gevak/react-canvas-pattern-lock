@@ -1,6 +1,6 @@
 import { registerEvent } from '../utils/dom';
 import EventBus from '../utils/EventBus';
-import { colorHasAlpha, gcd, prop } from '../utils/libs';
+import { gcd, prop } from '../utils/libs';
 import { DEFAULT_LIGHT_THEME, DEFAULT_THEME_STATE, JUSTIFY_NODES_OPTION } from '../consts';
 import {
   Theme, ThemeParams, TNodes, TPatternLockOptions,
@@ -14,10 +14,6 @@ const events = {
 };
 
 class PatternLock {
-  autoHide: boolean = false;
-
-  autoHideTimeout: number = 400;
-
   _initialConfig!: TPatternLockOptions;
 
   $canvas!: HTMLCanvasElement;
@@ -39,6 +35,10 @@ class PatternLock {
   coordinates: {x: number, y: number} | null = null;
 
   selectedNodes: Array<{row: number, col: number, pushedAt?: number}> = [];
+
+  hoveredNode: {row: number, col: number} | null = null;
+
+  hoveredAt: number = 0;
 
   lastSelectedNode: typeof this.selectedNodes[number] | null = null;
 
@@ -62,7 +62,7 @@ class PatternLock {
 
   hover: boolean = false;
 
-  startDragTimeStamp: number | null = null;
+  setThemeRaf: number = 0;
 
   constructor(config: TPatternLockOptions) {
     if (!config.$canvas) throw createInvalidOptionError('$canvas');
@@ -84,8 +84,6 @@ class PatternLock {
     } = config;
     this._initialConfig = config;
     this.$canvas = $canvas;
-    this.autoHide = config.autoHide;
-    this.autoHideTimeout = config.autoHideTimeout;
     this.ctx = this.$canvas.getContext('2d')!;
     this.theme = theme;
     this.themeState = theme[themeStateKey];
@@ -95,7 +93,6 @@ class PatternLock {
 
     this.setDimensions({ width, height });
     this.setGrid(grid[0], grid[1]);
-    this.renderGrid();
     this.attachEventHandlers();
   }
 
@@ -112,27 +109,14 @@ class PatternLock {
   }
 
   setInitialState() {
-    this.coordinates = null;
     this.selectedNodes = [];
     this.lastSelectedNode = null;
     this.themeState = this.theme[this._initialConfig.themeStateKey];
 
-    this.forceRender();
+    this.renderGrid();
   }
 
-  forceRender = () => requestAnimationFrame(() => {
-    const previousDragState = this._isDragging;
-
-    this._isDragging = true;
-    this.calculationLoop(false);
-
-    requestAnimationFrame(() => {
-      this.renderLoop(false);
-      this._isDragging = previousDragState;
-    });
-  });
-
-  setGrid(rows: number, cols:number, rerender = true) {
+  setGrid(rows: number, cols:number) {
     this.rows = rows;
     this.cols = cols;
 
@@ -150,7 +134,10 @@ class PatternLock {
     this.themeState.dimens = { ...this.theme.initial.dimens, ...this.themeState.dimens };
 
     if (rerender) {
-      this.forceRender();
+      this.setThemeRaf = requestAnimationFrame(() => {
+        this.renderGrid();
+        this.drawSelected();
+      });
     }
 
     return this;
@@ -170,8 +157,9 @@ class PatternLock {
   attachEventHandlers() {
     this.registerEventListener(this.$canvas, 'mousedown touchstart', this._onTouchStart);
     this.registerEventListener(window, 'resize', this._onResize);
+
     if (this.hover) {
-      this.registerEventListener(this.$canvas, 'mousemove', this._handleMouseMove);
+      this._startListenMouse();
     }
   }
 
@@ -184,9 +172,10 @@ class PatternLock {
   _stopDragging = () => {
     cancelAnimationFrame(this.renderLoopRaf);
     cancelAnimationFrame(this.calculationLoopRaf);
+    cancelAnimationFrame(this.setThemeRaf);
     clearTimeout(this.resetTimeoutId);
     this._isDragging = false;
-    this.startDragTimeStamp = null;
+    this.hoveredAt = 0;
   };
 
   on(event: string, fn: Function) {
@@ -286,19 +275,32 @@ class PatternLock {
 
   _onResize = () => requestAnimationFrame(this.recalculateBounds);
 
-  _onTouchStart = (e: Event) => {
-    this._stopDragging();
-    requestAnimationFrame(this.recalculateBounds);
-
+  _startListenMouse = () => {
     // Start frame loops
     this.renderLoopRaf = requestAnimationFrame(this.renderLoop);
     this.calculationLoopRaf = requestAnimationFrame(this.calculationLoop);
 
-    if (e) e.preventDefault();
     this.dragListeners = [
       this.registerEventListener(window, 'mousemove touchmove', this._onTouchMove),
       this.registerEventListener(window, 'mouseup touchend', this._onTouchStop),
     ];
+  };
+
+  _onTouchStart = (e: Event) => {
+    if (!this.hover) {
+      this._stopDragging();
+      this._startListenMouse();
+    }
+
+    requestAnimationFrame(this.recalculateBounds);
+
+    if (e) e.preventDefault();
+
+    const mousePoint = this._getMousePointFromEvent(e);
+
+    if (this.isPointInCanvas(mousePoint)) {
+      this.coordinates = mousePoint;
+    }
 
     this.setInitialState();
 
@@ -308,6 +310,21 @@ class PatternLock {
 
   _onTouchStop = (e?: Event) => {
     if (e) e.preventDefault();
+
+    if (this.hover) {
+      this.renderLoop(false);
+      this._isDragging = false;
+
+      if (this.selectedNodes.length === 1) {
+        this.selectedNodes = [];
+      }
+
+      if (this.selectedNodes.length > 1) {
+        this._emitPatternComplete();
+      }
+
+      return;
+    }
 
     (this.dragListeners || []).forEach((fn) => fn());
     this._subscriptions = this._subscriptions.filter(
@@ -321,11 +338,7 @@ class PatternLock {
       this._emitPatternComplete();
     }
 
-    if (this.autoHide) {
-      this.resetTimeoutId = window.setTimeout(this._stopDragging, 2 * this.autoHideTimeout);
-    } else {
-      this._stopDragging();
-    }
+    this._stopDragging();
   };
 
   _onTouchMove = (e: Event) => {
@@ -340,26 +353,17 @@ class PatternLock {
         this._onTouchStop();
       }
     }
-  };
 
-  _handleMouseMove = (e: Event) => {
-    const mousePoint = this._getMousePointFromEvent(e);
+    if (!this._isDragging && this.hover) {
+      const mousePoint = this._getMousePointFromEvent(e);
 
-    if (!this._isDragging && this.isPointInCanvas(mousePoint)) {
-      this.coordinates = mousePoint;
-      this.recalculateBounds();
-
-      this.calculationLoop(false);
-
-      if (e) e.preventDefault();
+      if (this.isPointInCanvas(mousePoint)) {
+        this.coordinates = mousePoint;
+      } else {
+        this.coordinates = null;
+      }
     }
   };
-
-  renderHoverEffect(x: number, y: number) {
-    const { colors: { bg, hover: { inner, outer } } } = this.themeState;
-    this.drawNode(x, y, bg, bg, bg);
-    this.drawNode(x, y, inner, outer, outer);
-  }
 
   /*
      * Checks if given point is within the boundaries of the canvas
@@ -376,13 +380,18 @@ class PatternLock {
   /*
      * Check if the given node is already selected
      */
-  isSelected = (targetNode: TNodes[number]) => !!this.selectedNodes.filter(
+  isSelected = (targetNode: TNodes[number]) => this.selectedNodes.some(
     (node) => node.col === targetNode.col && node.row === targetNode.row,
-  ).length;
+  );
+
+  isHovered = (targetNode: TNodes[number]) => {
+    const t = targetNode;
+    return this.hoveredNode?.row === t.row && this.hoveredNode?.col === t.col;
+  };
 
   /*
-     * Adds intermediary nodes between lastSelectedNode and the target
-     */
+   * Adds intermediary nodes between lastSelectedNode and the target
+   */
   addIntermediaryNodes(target:TNodes[number]) {
     const stepNode = this.getIntermediaryStepDirection(this.lastSelectedNode, target);
 
@@ -455,7 +464,8 @@ class PatternLock {
     return finalStep;
   }
 
-  getElapsedTime = (value: boolean | number) => {
+  // eslint-disable-next-line class-methods-use-this
+  getElapsedTime = (value: boolean | number, startTime: number) => {
     let timeStamp: number;
     if (typeof value === 'boolean') {
       timeStamp = performance.now();
@@ -463,62 +473,43 @@ class PatternLock {
       timeStamp = value;
     }
 
-    if (!this.startDragTimeStamp) {
-      this.startDragTimeStamp = timeStamp;
-    }
-
-    return timeStamp - this.startDragTimeStamp;
+    return timeStamp - startTime;
   };
 
   // Calculate the state of the lock for the next frame
   calculationLoop = (runLoop:boolean | number = true) => {
-    const { dimens, colors: { bg } } = this.themeState;
+    const { dimens } = this.themeState;
+    const isDrag = Boolean(this._isDragging && this.coordinates);
+    const isHover = Boolean(this.hover && !this._isDragging && this.coordinates);
 
-    if (this._isDragging && this.coordinates) {
+    if (isDrag || isHover) {
       // eslint-disable-next-line consistent-return
       this.forEachNode((x: number, y: number) => {
-        const dist = Math.sqrt(
-          (this.coordinates!.x - x) ** 2 + (this.coordinates!.y - y) ** 2,
-        );
+        const dist = Math.sqrt((this.coordinates!.x - x) ** 2 + (this.coordinates!.y - y) ** 2);
+        const col = this._findColByX(x);
+        const row = this._findRowByY(y);
+        const currentNode = { col, row };
 
         if (dist < dimens.nodeRadius + 1) {
-          const col = this._findColByX(x);
-          const row = this._findRowByY(y);
-
-          const currentNode = { col, row };
-
-          if (!this.isSelected(currentNode)) {
+          if (isDrag && !this.isSelected(currentNode)) {
             this.addIntermediaryNodes(currentNode);
             this.selectedNodes.push(currentNode);
 
             return false;
           }
-        }
-      });
-    }
 
-    if (!this._isDragging && this.coordinates && this.hover) {
-      this.forEachNode((x: number, y: number) => {
-        const dist = Math.sqrt(
-          (this.coordinates!.x - x) ** 2 + (this.coordinates!.y - y) ** 2,
-        );
-        const col = this._findColByX(x);
-        const row = this._findRowByY(y);
+          if (isHover && !this.isSelected(currentNode)) {
+            if (!this.isHovered(currentNode)) {
+              this.hoveredNode = currentNode;
+              this.hoveredAt = performance.now();
 
-        const isSelected = this.selectedNodes.findIndex(
-          (sNode) => sNode.col === col && sNode.row === row,
-        ) !== -1;
+              return false;
+            }
+          }
+        } else if (this.hover && this.isHovered(currentNode)) {
+          this.hoveredNode = null;
 
-        if (isSelected) return;
-
-        if (dist < dimens.nodeRadius + 1) {
-          const currentNode = { col, row };
-          const coords = this._getCoords(currentNode.col, currentNode.row);
-
-          this.renderHoverEffect(coords.x, coords.y);
-        } else {
-          this.drawNode(x, y, bg, bg, bg);
-          this.drawNode(x, y);
+          return false;
         }
       });
     }
@@ -531,11 +522,19 @@ class PatternLock {
   // Render the state of the lock
   renderLoop = (runLoop: boolean | number = true) => {
     if (this._isDragging) {
-      const elapsed = this.getElapsedTime(runLoop);
-
       // Paint the grid
       this.renderGrid();
-      this.drawSelected(elapsed);
+      this.drawSelected();
+    }
+
+    if (this.hover && !this._isDragging) {
+      // Paint the grid
+      this.renderGrid();
+      this.drawSelected();
+
+      if (this.hoveredNode) {
+        this.drawHoveredNode(this.getElapsedTime(runLoop, this.hoveredAt));
+      }
     }
 
     if (runLoop) {
@@ -573,6 +572,13 @@ class PatternLock {
     }
   }
 
+  drawHoveredNode(elapsed: number) {
+    const { colors: { hover: { inner, outer } } } = this.themeState;
+    const { x, y } = this._getCoords(this.hoveredNode!.col, this.hoveredNode!.row);
+    const alpha = 1 - ((100 - elapsed) / 100);
+    this.drawNode(x, y, inner, outer, outer, alpha);
+  }
+
   drawNode(
     x: number,
     y:number,
@@ -593,7 +599,7 @@ class PatternLock {
     // clear circle
     this.ctx.globalCompositeOperation = 'destination-out';
     this.ctx.beginPath();
-    this.ctx.arc(x, y, ringRadius + 2, 0, Math.PI * 2);
+    this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
     this.ctx.fill();
     this.ctx.globalCompositeOperation = 'source-over';
 
@@ -603,14 +609,6 @@ class PatternLock {
     this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
     this.ctx.fill();
 
-    if (this.autoHide && !colorHasAlpha(this.ctx.fillStyle)) {
-      this.ctx.globalAlpha = 1 - this.ctx.globalAlpha;
-      this.ctx.fillStyle = ringBg;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-
     // Draw inner circle
     this.ctx.fillStyle = centerColor || primary;
     this.ctx.globalAlpha = alpha > 0.25 ? 1 : Math.max(alpha + 0.75, 0);
@@ -618,13 +616,6 @@ class PatternLock {
     this.ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
     this.ctx.fill();
 
-    if (this.autoHide && !colorHasAlpha(this.ctx.fillStyle)) {
-      this.ctx.fillStyle = primary;
-      this.ctx.globalAlpha = 1 - this.ctx.globalAlpha;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, coreRadius, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
     this.ctx.globalAlpha = 1;
   }
 
@@ -660,14 +651,9 @@ class PatternLock {
     this.ctx.globalAlpha = 1;
   }
 
-  drawSelected = (elapsedTime: number) => {
+  drawSelected = () => {
     const { colors: { accent, primary, selectedRingBg } } = this.themeState;
     const nodesCount = this.selectedNodes.length;
-
-    const getAlpha = (pushedAt?: number) => (
-      pushedAt
-        ? 1 - ((elapsedTime - pushedAt) / this.autoHideTimeout)
-        : 1);
 
     const drawNodes = () => {
       let lastPointCoords;
@@ -675,10 +661,6 @@ class PatternLock {
       for (let i = 0; i < nodesCount; i += 1) {
         const prev = this.selectedNodes[i - 1];
         const curr = this.selectedNodes[i];
-
-        if (this.autoHide && !curr.pushedAt) {
-          curr.pushedAt = elapsedTime;
-        }
 
         const pointCoords = this._getCoords(curr.col, curr.row);
         const isLastNode = nodesCount - 1 === i;
@@ -689,7 +671,6 @@ class PatternLock {
 
         if (curr && prev) {
           const prevPointCoords = this._getCoords(prev.col, prev.row);
-          const alpha = getAlpha(curr.pushedAt);
 
           if (!this.coordinates && isLastNode) {
             this.drawNode(
@@ -698,7 +679,6 @@ class PatternLock {
               accent,
               primary,
               selectedRingBg,
-              alpha,
             );
           }
 
@@ -708,7 +688,6 @@ class PatternLock {
             accent,
             primary,
             selectedRingBg,
-            alpha,
           );
         }
       }
@@ -733,13 +712,11 @@ class PatternLock {
         }
 
         if (curr && prev) {
-          const alpha = getAlpha(curr.pushedAt);
-
-          this.joinNodes(prev.col, prev.row, curr.col, curr.row, false, alpha);
+          this.joinNodes(prev.col, prev.row, curr.col, curr.row, false);
         }
       }
 
-      if (lastPointCoords && this.coordinates) {
+      if (this._isDragging && lastPointCoords && this.coordinates) {
         // Draw a line between last node to the current drag position
         this.joinNodes(
           lastPointCoords.x,

@@ -43,10 +43,3 @@ export function nodesToCode(nodes: TNodes, grid: TGrid): number[] {
 
   return nodes.map((node) => rowColMap[generateKey(node.row, node.col)]);
 }
-
-export function colorHasAlpha(color: string) {
-  const isRgba = color.indexOf('rgba(') !== -1;
-  const isHexA = color.startsWith('#') && color.length > 7;
-
-  return isRgba || isHexA;
-}

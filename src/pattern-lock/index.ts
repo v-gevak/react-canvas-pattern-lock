@@ -545,6 +545,7 @@ class PatternLock {
   // Render the grid to the canvas
   renderGrid() {
     this.ctx.fillStyle = this.themeState.colors.bg;
+    this.ctx.clearRect(0,0, this.dimens.width, this.dimens.height);
     this.ctx.fillRect(0, 0, this.dimens.width, this.dimens.height);
 
     // Draw all the nodes
